@@ -3,39 +3,66 @@
 //
 
 class paymentViewController: UIViewController {
-    var delegate: PaymentViewControllerDelegate
+    
+    // MARK:- Varaibles
+    internal let viewModel: PaymentViewModel
+    weak var  delegate: PaymentViewControllerDelegate?
     let customView = PaymentView()
     let payment: Payment?
-
-    func callbacks() {
+    
+    // MARK:- MESTHODS LIFE CYCLE
+    func viewDidLoad() {
+        fetchPayment()
+        initUi()
+    }
+    
+    func initUi() {
+        navigationController?.setNavigationBarHidden(false, animated: false)
         view.backgroundColor = UIColor(displayP3Red: 1, green: 1, blue: 1, alpha: 1)
-        customView.didTapButton = {
+        self.preCustomView()
+    }
+    
+    func preCustomView() {
+        customView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        customView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        view.addSubview(customView)
+        callbacks()
+    }
+    
+    func callbacks() {
+        customView.didTapButton = { [weak self] in
             if let payment = self.payment {
-                self.delegate.didFinishFlow(amount: payment.amount
+                self.delegate.didFinishFlow(amount: payment.amount,
                                             currency: payment.currency)
             }
         }
     }
-
-    func viewDidLoad() {
-        navigationController?.setNavigationBarHidden(false, animated: false)
-        customView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
-        customView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        view.addSubview(customView)
-        fetchPayment()
-        setupCallbacks()
-    }
-
-    internal let ViewModel: PaymentViewModel
-
+    
+    // MARK:- FEATCHING DATA
     func fetchPayment() {
         customView.statusText = "Fetching data"
-        ApiClient.sharedInstance().fetchPayment { payment in
-            self.CustomView.isEuro = payment.currency == "EUR" ? true : false
-            if payment!.amount != 0 {
-                self.CustomView.label.text = "\(payment!.amount)"
-                return
+        ApiClient.sharedInstance().fetchPayment { [weak self] payment in
+            self.payment = payment
+            self.customView.isEuro = viewModel.isEuroOrNot(payment:payment)
+            if let paymentModel = payment {
+                if paymentModel.amount != 0 {
+                    self.customView.label.text = "\(paymentModel.amount)"
+                    return
+                }
             }
         }
+    }
+}
+
+class PaymentViewModel {
+    func isEuroOrNot( payment: Payment?) -> Bool {
+        if let paymentModel = payment {
+            if payment.currency == "EUR" {
+                return true
+            }else{
+                false
+            }
+        }
+        return false
     }
 }
